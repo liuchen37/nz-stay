@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "nz-stay-shell-v1";
+const CACHE_NAME = "nz-stay-shell-v2-prv";
 const BASE = new URL("./", self.location.href);
 
 const APP_FILES = [
