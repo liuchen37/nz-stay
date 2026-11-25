@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#087f6d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="NZ 居住">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <title>NZ 居住记录</title>
+
+  <style>
+    :root {
+      color-scheme: light;
+      --green: #087f6d;
+      --bg: #f3f6f5;
+      --text: #19352e;
+      --muted: #64766e;
+      --border: #dce7e1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      max-width: 560px;
+      margin: auto;
+      padding: calc(24px + env(safe-area-inset-top)) 18px
+               calc(110px + env(safe-area-inset-bottom));
+    }
+    h1 { font-size: 27px; margin: 4px 0; }
+    h2 { font-size: 19px; margin: 0 0 14px; }
+    p { margin: 8px 0; }
+    .muted, small { color: var(--muted); }
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+    .hero { background: var(--green); color: white; border: 0; }
+    .hero .muted { color: #d4eee6; }
+    .big { font-size: 44px; font-weight: 750; line-height: 1.25; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .number { font-size: 29px; font-weight: 700; }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    label { display: block; margin: 15px 0 6px; font-weight: 600; }
+    input, select, button {
+      font: inherit;
+      border-radius: 12px;
+      min-height: 46px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #b8cbc1;
+      background: white;
+      color: var(--text);
+    }
+    button {
+      border: 0;
+      background: var(--green);
+      color: white;
+      padding: 10px 15px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    button:disabled { opacity: .5; cursor: default; }
+    button.secondary { background: #eaf3ee; color: var(--green); }
+    button.danger { background: #fbecea; color: #a73535; }
+    button.full { width: 100%; margin-top: 12px; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .actions button { flex: 1; }
+    .entry { padding: 15px 0; border-top: 1px solid var(--border); }
+    .entry:first-child { border-top: 0; }
+    .note { overflow-wrap: anywhere; white-space: pre-wrap; }
+    .notice {
+      background: #fff7df;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+    }
+    nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(255,255,255,.97);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+    nav button {
+      max-width: 180px;
+      flex: 1;
+      color: var(--muted);
+      background: transparent;
+    }
+    nav button.active { color: var(--green); background: #eaf3ee; }
+    #message {
+      padding: 12px;
+      border-radius: 12px;
+      background: #fff7df;
+      margin-top: 14px;
+      white-space: pre-wrap;
+    }
+    [hidden] { display: none !important; }
+    footer { font-size: 13px; color: var(--muted); margin-top: 20px; }
+  </style>
+</head>
+
+<body>
+<main>
+  <header>
+    <div class="muted">你的新西兰生活时间线</div>
+    <h1>NZ 居住记录</h1>
+    <p class="muted" id="today-label"></p>
+  </header>
+
+  <div id="message" role="status" aria-live="polite" hidden></div>
+
+  <section id="view-home">
+    <div class="card" id="welcome">
+      <h2>先设置统计起点</h2>
+      <p>填写你要开始统计的日期，以及当时人在境内还是境外。</p>
+      <button class="full" id="setup-button">开始设置</button>
+    </div>
+
+    <div id="dashboard" hidden>
+      <div class="card hero">
+        <div id="current-status"></div>
+        <p class="big"><span id="current-days">0</span> 天</p>
+        <div class="muted" id="current-caption"></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="muted">累计境内</div>
+          <div class="number"><span id="inside-days">0</span> 天</div>
+        </div>
+        <div class="card">
+          <div class="muted">累计境外</div>
+          <div class="number"><span id="outside-days">0</span> 天</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>快速记录</h2>
+        <div class="actions">
+          <button id="quick-in">记录入境</button>
+          <button id="quick-out" class="secondary">记录离境</button>
+        </div>
+        <p class="muted" id="range-label"></p>
+      </div>
+
+      <div class="card">
+        <h2>备份状态</h2>
+        <p id="backup-status"></p>
+        <button class="secondary full" id="home-backup">导出备份</button>
+        <small>导出后请选择“存储到‘文件’”，保存至 iCloud Drive。</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>统计口径</h2>
+      <p class="muted">
+        按新西兰日历日期统计，包含今天。入境日计境内，
+        离境日计境外；同一天最多一条出入境记录。
+      </p>
+      <p class="notice">
+        仅供个人记录和规划，不代表移民局官方天数或 PRV 申请资格。
+        第一版暂不处理同一天多次出入境。
+      </p>
+    </div>
+  </section>
+
+  <section id="view-records" hidden>
+    <form class="card" id="event-form">
+      <h2 id="event-heading">新增出入境记录</h2>
+      <input type="hidden" id="event-id">
+
+      <label for="event-type">类型</label>
+      <select id="event-type">
+        <option value="in">入境新西兰</option>
+        <option value="out">离境新西兰</option>
+      </select>
+
+      <label for="event-date">新西兰当地日期</label>
+      <input type="date" id="event-date" required>
+
+      <label for="event-note">备注，可选</label>
+      <input id="event-note" maxlength="160"
+             placeholder="例如：从上海返回奥克兰">
+
+      <div class="actions">
+        <button type="submit">保存记录</button>
+        <button type="button" class="secondary" id="cancel-edit">清空</button>
+      </div>
+    </form>
+
+    <div class="card">
+      <h2>出入境时间线</h2>
+      <div id="event-list"></div>
+    </div>
+  </section>
+
+  <section id="view-settings" hidden>
+    <form class="card" id="settings-form">
+      <h2>统计设置</h2>
+
+      <label for="start-date">统计起算日</label>
+      <input type="date" id="start-date" required>
+      <small>
+        填写你确认的统计起点。它不一定等于 RV 批准日期，
+        本工具不会自动认定居民身份起算日。
+      </small>
+
+      <label for="initial-state">起算日开始时的位置</label>
+      <select id="initial-state">
+        <option value="in">在新西兰境内</option>
+        <option value="out">在新西兰境外</option>
+      </select>
+      <small>
+        如果起算日当天有出入境，也请添加当天记录；
+        这里选择该次出入境前的位置。
+      </small>
+
+      <label for="rv-date">RV 批准日期，可选</label>
+      <input type="date" id="rv-date">
+
+      <label for="travel-expiry">旅行条件到期日，可选</label>
+      <input type="date" id="travel-expiry">
+      <small>仅保存供查阅，不用于判断身份或返程资格。</small>
+
+      <button class="full" type="submit">保存设置</button>
+    </form>
+
+    <div class="card">
+      <h2>数据与 iCloud 备份</h2>
+      <p class="muted">
+        数据保存在此设备的浏览器中，不会自动同步到 iCloud。
+        请定期导出备份。
+      </p>
+      <button class="full" id="export-json">导出 JSON 备份</button>
+      <button class="full secondary" id="import-button">导入备份并恢复</button>
+      <button class="full secondary" id="export-csv">导出 CSV 表格</button>
+      <input type="file" id="import-file"
+             accept=".json,application/json" hidden>
+      <p class="notice">
+        清理网站数据、设备故障或更换手机可能丢失本地记录。
+        导入会替换现有数据，请先备份。
+      </p>
+    </div>
+
+    <footer>
+      NZ 居住记录 · v1<br>
+      无账号、无分析追踪、无数据上传。<br>
+      同一设备的 Safari 页面与主屏幕应用不保证共享同一份存储；
+      建议添加到主屏幕后，再从桌面入口正式开始记录。
+    </footer>
+  </section>
+</main>
+
+<nav aria-label="主导航">
+  <button data-view="home" class="active">首页</button>
+  <button data-view="records">记录</button>
+  <button data-view="settings">设置与备份</button>
+</nav>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const DAY = 86400000;
+const STORAGE_KEY = "nz-stay-v1";
+
+let db;
+let state;
+let busy = false;
+
+function emptyState() {
+  return {
+    version: 1,
+    settings: {
+      startDate: "",
+      initialState: "in",
+      rvDate: "",
+      travelExpiry: ""
+    },
+    events: [],
+    revision: 0,
+    lastExportedAt: null,
+    lastExportedRevision: null
+  };
+}
+
+function nzToday() {
+  const parts = new Intl.DateTimeFormat("en-NZ", {
+    timeZone: "Pacific/Auckland",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+// 日期仅用于日历天运算，不把用户日期转为本地时区时间。
+function dayNumber(value) {
+  return Date.parse(value + "T00:00:00Z") / DAY;
+}
+
+function validDate(value) {
+  if (typeof value !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const date = new Date(value + "T00:00:00Z");
+  return Number.isFinite(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value;
+}
+
+function ordered(events) {
+  return [...events].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function notify(text) {
+  $("message").textContent = text;
+  $("message").hidden = !text;
+}
+
+function showView(view) {
+  for (const name of ["home", "records", "settings"]) {
+    $("view-" + name).hidden = name !== view;
+  }
+  document.querySelectorAll("[data-view]").forEach(button => {
+    button.classList.toggle("active", button.dataset.view === view);
+  });
+}
+
+function validate(data) {
+  if (!data || data.version !== 1 || !data.settings ||
+      !Array.isArray(data.events)) {
+    throw new Error("备份格式不正确，或版本不支持。");
+  }
+
+  const s = data.settings;
+
+  if (!["in", "out"].includes(s.initialState)) {
+    throw new Error("起算位置不正确。");
+  }
+  if (s.startDate !== "" && !validDate(s.startDate)) {
+    throw new Error("统计起算日无效。");
+  }
+  if (s.startDate && s.startDate > nzToday()) {
+    throw new Error("统计起算日不能晚于新西兰的今天。");
+  }
+  for (const value of [s.rvDate, s.travelExpiry]) {
+    if (value !== "" && !validDate(value)) {
+      throw new Error("签证相关日期格式不正确。");
+    }
+  }
+  if (!s.startDate && data.events.length) {
+    throw new Error("请先设置统计起算日。");
+  }
+
+  let previousState = s.initialState;
+  let previousDate = "";
+  const ids = new Set();
+
+  for (const event of ordered(data.events)) {
+    if (!event || typeof event.id !== "string" || !event.id ||
+        ids.has(event.id)) {
+      throw new Error("记录标识无效或重复。");
+    }
+    ids.add(event.id);
+
+    if (!["in", "out"].includes(event.type) ||
+        !validDate(event.date) ||
+        typeof event.note !== "string" ||
+        event.note.length > 160) {
+      throw new Error("出入境记录格式不正确。");
+    }
+    if (event.date < s.startDate) {
+      throw new Error("记录不能早于统计起算日，请先调整设置。");
+    }
+    if (event.date > nzToday()) {
+      throw new Error("第一版仅记录实际行程，不能填写未来日期。");
+    }
+    if (event.date === previousDate) {
+      throw new Error("第一版同一天只能记录一次出入境。");
+    }
+    if (event.type === previousState) {
+      throw new Error(
+        `${event.date} 的记录与此前位置冲突。\n` +
+        "请检查起算位置，以及入境、离境是否交替。"
+      );
+    }
+
+    previousDate = event.date;
+    previousState = event.type;
+  }
+}
+
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("nz-stay", 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore("data");
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function readDatabase() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("data", "readonly");
+    const request = tx.objectStore("data").get(STORAGE_KEY);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function writeDatabase(value) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("data", "readwrite");
+    tx.objectStore("data").put(value, STORAGE_KEY);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error("保存被中断。"));
+  });
+}
+
+async function commit(next, changeData = true) {
+  if (busy) throw new Error("正在保存，请稍后再试。");
+  busy = true;
+
+  try {
+    validate(next);
+    if (changeData) {
+      next.revision = (state.revision || 0) + 1;
+    }
+    await writeDatabase(next);
+    state = next;
+    render();
+  } finally {
+    busy = false;
+  }
+}
+
+function calculate() {
+  const start = dayNumber(state.settings.startDate);
+  const end = dayNumber(nzToday()) + 1;
+
+  let cursor = start;
+  let current = state.settings.initialState;
+  let inside = 0;
+  let currentSince = start;
+
+  for (const event of ordered(state.events)) {
+    const date = dayNumber(event.date);
+    if (current === "in") inside += date - cursor;
+    cursor = date;
+    currentSince = date;
+    current = event.type;
+  }
+
+  if (current === "in") inside += end - cursor;
+
+  return {
+    inside,
+    outside: end - start - inside,
+    current,
+    currentDays: end - currentSince
+  };
+}
+
+function element(tag, text, className = "") {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  node.className = className;
+  return node;
+}
+
+function renderRecords() {
+  const list = $("event-list");
+  list.replaceChildren();
+
+  if (!state.events.length) {
+    list.append(element("p", "还没有出入境记录。", "muted"));
+    return;
+  }
+
+  for (const event of ordered(state.events).reverse()) {
+    const item = element("div", "", "entry");
+    item.append(element(
+      "strong",
+      `${event.type === "in" ? "↘ 入境" : "↗ 离境"} · ${event.date}`
+    ));
+    if (event.note) {
+      item.append(element("p", event.note, "muted note"));
+    }
+
+    const actions = element("div", "", "actions");
+    const edit = element("button", "修改", "secondary");
+    const remove = element("button", "删除", "danger");
+
+    edit.onclick = () => {
+      resetEventForm();
+      $("event-id").value = event.id;
+      $("event-type").value = event.type;
+      $("event-date").value = event.date;
+      $("event-note").value = event.note;
+      $("event-heading").textContent = "修改出入境记录";
+      showView("records");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    remove.onclick = async () => {
+      if (!confirm(`删除 ${event.date} 的这条记录？`)) return;
+      try {
+        const next = structuredClone(state);
+        next.events = next.events.filter(e => e.id !== event.id);
+        await commit(next);
+        resetEventForm();
+        notify("记录已删除。");
+      } catch (error) {
+        notify(
+          error.message +
+          "\n删除后也必须保持时间线有效；可先修改错误日期或从最新记录依次删除。"
+        );
+      }
+    };
+
+    actions.append(edit, remove);
+    item.append(actions);
+    list.append(item);
+  }
+}
+
+function render() {
+  const today = nzToday();
+  $("today-label").textContent = `新西兰日期：${today}`;
+  $("event-date").max = today;
+  $("start-date").max = today;
+
+  const configured = Boolean(state.settings.startDate);
+  $("welcome").hidden = configured;
+  $("dashboard").hidden = !configured;
+
+  if (configured) {
+    const stats = calculate();
+    $("current-status").textContent =
+      stats.current === "in" ? "目前在新西兰" : "目前在境外";
+    $("current-days").textContent = stats.currentDays;
+    $("current-caption").textContent =
+      stats.current === "in"
+        ? "本段境内时间 · 包含今天"
+        : "本段境外时间 · 包含今天";
+    $("inside-days").textContent = stats.inside;
+    $("outside-days").textContent = stats.outside;
+    $("range-label").textContent =
+      `${state.settings.startDate} 至 ${today} · 包含首尾日期`;
+  }
+
+  let backupText = "尚未导出备份。";
+  if (state.lastExportedAt) {
+    const time = new Date(state.lastExportedAt).toLocaleString("zh-CN");
+    backupText = `上次导出：${time}。`;
+    backupText += state.lastExportedRevision === state.revision
+      ? " 此后没有新增修改。"
+      : " 此后有修改，请重新备份。";
+  }
+  $("backup-status").textContent =
+    backupText + " 应用无法确认文件是否已存入 iCloud。";
+
+  renderRecords();
+}
+
+function fillSettings() {
+  const s = state.settings;
+  $("start-date").value = s.startDate;
+  $("initial-state").value = s.initialState;
+  $("rv-date").value = s.rvDate;
+  $("travel-expiry").value = s.travelExpiry;
+}
+
+function resetEventForm(type) {
+  $("event-form").reset();
+  $("event-id").value = "";
+  $("event-date").value = nzToday();
+  $("event-heading").textContent = "新增出入境记录";
+  if (type) $("event-type").value = type;
+}
+
+function quickRecord(type) {
+  resetEventForm(type);
+  showView("records");
+  notify("");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// 支持文件分享时调出 iOS 分享菜单，否则交给浏览器下载。
+async function deliverFile(file) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({ files: [file], title: "NZ 居住记录" });
+    return "share";
+  }
+
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return "download";
+}
+
+async function exportBackup() {
+  if (busy) {
+    notify("正在保存，请稍后再导出。");
+    return;
+  }
+
+  const revision = state.revision;
+  const exportedAt = new Date().toISOString();
+  const payload = structuredClone(state);
+  payload.exportedAt = exportedAt;
+
+  const file = new File(
+    [JSON.stringify(payload, null, 2)],
+    `NZ居住备份-${nzToday()}-${Date.now()}.json`,
+    { type: "application/json" }
+  );
+
+  try {
+    const mode = await deliverFile(file);
+    const next = structuredClone(state);
+    next.lastExportedAt = exportedAt;
+    next.lastExportedRevision = revision;
+    await commit(next, false);
+
+    notify(
+      mode === "share"
+        ? "已完成分享流程。请确认备份文件已保存到 iCloud Drive；应用无法验证保存结果。"
+        : "已发起备份文件下载。请到下载文件中确认，并将它移动到 iCloud Drive。"
+    );
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      notify("导出或更新导出状态失败：" + error.message);
+    }
+  }
+}
+
+function csvCell(value) {
+  let text = String(value ?? "");
+  // 避免备注被表格软件当成公式执行。
+  if (/^[=+\-@\t\r\n]/.test(text)) text = "'" + text;
+  return '"' + text.replaceAll('"', '""') + '"';
+}
+
+async function exportCSV() {
+  const rows = [
+    ["类型", "新西兰当地日期", "备注"],
+    [
+      "统计起点",
+      state.settings.startDate,
+      state.settings.initialState === "in" ? "初始境内" : "初始境外"
+    ],
+    ...ordered(state.events).map(event => [
+      event.type === "in" ? "入境" : "离境",
+      event.date,
+      event.note
+    ])
+  ];
+
+  const text = "\uFEFF" +
+    rows.map(row => row.map(csvCell).join(",")).join("\r\n");
+
+  try {
+    await deliverFile(new File(
+      [text],
+      `NZ出入境记录-${nzToday()}.csv`,
+      { type: "text/csv;charset=utf-8" }
+    ));
+    notify("已发起 CSV 导出。CSV 用于查看，不可作为完整恢复备份。");
+  } catch (error) {
+    if (error.name !== "AbortError") notify(error.message);
+  }
+}
+
+function bindEvents() {
+  document.querySelectorAll("[data-view]").forEach(button => {
+    button.onclick = () => {
+      if (button.dataset.view === "settings") fillSettings();
+      showView(button.dataset.view);
+      notify("");
+    };
+  });
+
+  $("setup-button").onclick = () => {
+    fillSettings();
+    showView("settings");
+  };
+
+  $("quick-in").onclick = () => quickRecord("in");
+  $("quick-out").onclick = () => quickRecord("out");
+  $("cancel-edit").onclick = () => resetEventForm();
+
+  $("settings-form").onsubmit = async event => {
+    event.preventDefault();
+    try {
+      const next = structuredClone(state);
+      next.settings = {
+        startDate: $("start-date").value,
+        initialState: $("initial-state").value,
+        rvDate: $("rv-date").value,
+        travelExpiry: $("travel-expiry").value
+      };
+      await commit(next);
+      showView("home");
+      notify("设置已保存到本机。");
+    } catch (error) {
+      notify(error.message);
+    }
+  };
+
+  $("event-form").onsubmit = async event => {
+    event.preventDefault();
+    try {
+      if (!state.settings.startDate) {
+        throw new Error("请先在设置中填写统计起算日。");
+      }
+
+      const id = $("event-id").value;
+      const record = {
+        id: id || crypto.randomUUID(),
+        type: $("event-type").value,
+        date: $("event-date").value,
+        note: $("event-note").value.trim()
+      };
+
+      const next = structuredClone(state);
+      next.events = next.events.filter(e => e.id !== record.id);
+      next.events.push(record);
+      next.events = ordered(next.events);
+
+      await commit(next);
+      resetEventForm();
+      notify("记录已保存到本机，记得定期备份。");
+    } catch (error) {
+      notify(error.message);
+    }
+  };
+
+  $("export-json").onclick = exportBackup;
+  $("home-backup").onclick = exportBackup;
+  $("export-csv").onclick = exportCSV;
+  $("import-button").onclick = () => $("import-file").click();
+
+  $("import-file").onchange = async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("备份文件超过 5MB，请检查是否选错文件。");
+      }
+
+      const raw = JSON.parse(await file.text());
+      validate(raw);
+
+      if (!confirm(
+        `备份中有 ${raw.events.length} 条出入境记录。\n` +
+        "导入会替换此设备中的全部现有记录和设置。是否继续？"
+      )) return;
+
+      // 仅接收已知字段，不直接合并外部对象。
+      const next = emptyState();
+      next.settings = {
+        startDate: raw.settings.startDate,
+        initialState: raw.settings.initialState,
+        rvDate: raw.settings.rvDate,
+        travelExpiry: raw.settings.travelExpiry
+      };
+      next.events = raw.events.map(e => ({
+        id: e.id,
+        type: e.type,
+        date: e.date,
+        note: e.note
+      }));
+
+      await commit(next);
+      fillSettings();
+      resetEventForm();
+      showView("home");
+      notify("备份已恢复到本机。建议核对记录后重新导出一份备份。");
+    } catch (error) {
+      notify("导入失败：" + error.message);
+    } finally {
+      event.target.value = "";
+    }
+  };
+}
+
+async function init() {
+  try {
+    db = await openDatabase();
+    state = (await readDatabase()) || emptyState();
+    validate(state);
+
+    fillSettings();
+    resetEventForm();
+    bindEvents();
+    render();
+
+    // 回到应用或跨过新西兰午夜后刷新统计，不覆盖正在输入的表单。
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) render();
+    });
+    setInterval(() => {
+      if (!document.hidden) render();
+    }, 60000);
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(error => {
+        notify("本机数据功能可用，但离线缓存注册失败：" + error.message);
+      });
+    }
+  } catch (error) {
+    notify(
+      "无法初始化本地数据：" + error.message +
+      "\n请使用普通 Safari 模式，不要使用无痕浏览。" +
+      "\n为避免覆盖已有记录，本次没有写入数据。"
+    );
+  }
+}
+
+init();
+</script>
+</body>
+</html>
