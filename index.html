@@ -886,17 +886,10 @@ function renderPrvCountdown() {
     return;
   }
 
-  const target = new Date(rvDate + "T00:00:00Z");
-  const originalMonth = target.getUTCMonth();
-
-  target.setUTCFullYear(target.getUTCFullYear() + 2);
-
-  // 处理闰年 2 月 29 日。
-  if (target.getUTCMonth() !== originalMonth) {
-    target.setUTCDate(0);
-  }
-
-  const targetDate = target.toISOString().slice(0, 10);
+  // INZ Visa Pak 588：PRV 的 24 个月按 730 天计算。
+  const targetDate = new Date(
+    (dayNumber(rvDate) + 730) * DAY
+  ).toISOString().slice(0, 10);
   const remaining = Math.max(
     0,
     dayNumber(targetDate) - dayNumber(nzToday())
