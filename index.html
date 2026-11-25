@@ -855,5 +855,91 @@ async function init() {
 
 init();
 </script>
+  <script>
+"use strict";
+
+// PRV 第一阶段：仅显示居民签证满两年的时间门槛。
+// 此版本适用于 RV 签发时已在新西兰境内的情况。
+function renderPrvCountdown() {
+  let card = document.getElementById("prv-countdown");
+
+  if (!card) {
+    card = document.createElement("div");
+    card.id = "prv-countdown";
+    card.className = "card";
+
+    const grid = document.querySelector("#dashboard .grid");
+    grid.insertAdjacentElement("afterend", card);
+  }
+
+  card.replaceChildren();
+  card.append(element("h2", "PRV · 满两年倒计时"));
+
+  const rvDate = state.settings.rvDate;
+
+  if (!validDate(rvDate) || rvDate > nzToday()) {
+    card.append(element(
+      "p",
+      "请在设置中填写有效的 RV 签发日期。",
+      "muted"
+    ));
+    return;
+  }
+
+  const target = new Date(rvDate + "T00:00:00Z");
+  const originalMonth = target.getUTCMonth();
+
+  target.setUTCFullYear(target.getUTCFullYear() + 2);
+
+  // 处理闰年 2 月 29 日。
+  if (target.getUTCMonth() !== originalMonth) {
+    target.setUTCDate(0);
+  }
+
+  const targetDate = target.toISOString().slice(0, 10);
+  const remaining = Math.max(
+    0,
+    dayNumber(targetDate) - dayNumber(nzToday())
+  );
+
+  card.append(element(
+    "p",
+    remaining > 0 ? `还有 ${remaining} 天` : "已到满两年日期",
+    "number"
+  ));
+
+  card.append(element(
+    "p",
+    `RV 签发日：${rvDate}`,
+    "muted"
+  ));
+
+  card.append(element(
+    "p",
+    `满两年日期：${targetDate}`,
+    "muted"
+  ));
+
+  card.append(element(
+    "p",
+    "适用于 RV 签发时已在新西兰境内，且居民签证持续持有的情况。" +
+    "这里只计算两年时间门槛，尚未核对申请前两个年度各 184 天的居住要求、" +
+    "居民签证条件或其他申请要求，不代表已具备 PRV 申请资格。",
+    "notice"
+  ));
+}
+
+// 在原有页面刷新时，同时更新倒计时；不改写已保存的数据。
+const renderWithoutPrv = render;
+
+render = function () {
+  renderWithoutPrv();
+  renderPrvCountdown();
+};
+
+if (state && state.settings) {
+  renderPrvCountdown();
+}
+</script>
 </body>
 </html>
